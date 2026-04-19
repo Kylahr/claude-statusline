@@ -107,12 +107,6 @@ if ($data.model -and $data.model.display_name) {
     $parts += (C "33" $model_name)
 }
 
-# session timer (bright white)
-if ($data.cost -and $data.cost.total_duration_ms -ne $null) {
-    $dur = Format-Duration ([long]$data.cost.total_duration_ms)
-    $parts += (C "97" ("Session: " + $dur))
-}
-
 # context tokens used / max (green)
 $used_input = $null
 if ($data.context_window) {
@@ -141,15 +135,10 @@ if ($data.context_window) {
     }
 }
 
-# in/out tokens (bright green) — last API call
-if ($data.context_window -and $data.context_window.current_usage) {
-    $cu = $data.context_window.current_usage
-    $in = if ($cu.input_tokens) { [long]$cu.input_tokens } else { 0 }
-    $out = if ($cu.output_tokens) { [long]$cu.output_tokens } else { 0 }
-    if ($in -gt 0 -or $out -gt 0) {
-        $label = "in " + (Format-Tokens $in) + " out " + (Format-Tokens $out)
-        $parts += (C "92" $label)
-    }
+# session timer (bright white)
+if ($data.cost -and $data.cost.total_duration_ms -ne $null) {
+    $dur = Format-Duration ([long]$data.cost.total_duration_ms)
+    $parts += (C "97" ("Session: " + $dur))
 }
 
 # 5-hour rate limit (blue)

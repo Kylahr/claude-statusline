@@ -2,7 +2,7 @@
 
 A PowerShell statusline for [Claude Code](https://claude.com/claude-code) on Windows.
 
-Shows: working directory, git branch, model name, session timer, context token usage, last-call input/output tokens, and 5-hour + weekly rate limits (with reset timers). Segments auto-wrap into rows when the terminal is narrow.
+Shows: working directory, git branch, model name, context token usage, session timer, and 5-hour + weekly rate limits (with reset timers). Segments auto-wrap into rows when the terminal is narrow.
 
 ## Install (one command)
 
@@ -30,15 +30,14 @@ cd claude-statusline
 ## What it shows
 
 ```
-~/Desktop/Projekte | main | Opus 4.7 1M | 12m34s | ctx 42k/1.0M | in 38k out 3k | 5h [████░░░░]  52% (2h14m) | wk [██░░░░░░]  23% (4d11h)
+~/Desktop/Projekte | main | Opus 4.7 1M | ctx 42k/1.0M | Session: 12m34s | 5h [████    ]  52% (2h14m) | wk [██      ]  23% (4d11h)
 ```
 
 - **cyan** — current directory (with `~` for home)
 - **magenta** — git branch (if inside a repo)
 - **yellow** — model display name
-- **white** — session elapsed time (from `cost.total_duration_ms`)
 - **green** — context tokens used / max
-- **bright green** — input + output tokens from the last API call
+- **white** — session elapsed time (from `cost.total_duration_ms`)
 - **purple** — 5-hour rate limit bar + reset
 - **orange** — weekly rate limit bar + reset
 

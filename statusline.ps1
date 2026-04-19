@@ -33,7 +33,7 @@ function Format-Bar {
     $filled = [int][Math]::Round(($pct / 100.0) * $width)
     if ($filled -gt $width) { $filled = $width }
     $empty = $width - $filled
-    return ("[" + ([string][char]0x2588 * $filled) + ([string][char]0x2591 * $empty) + "]")
+    return ("[" + ([string][char]0x2588 * $filled) + (" " * $empty) + "]")
 }
 
 function Format-ResetTime {

@@ -38,7 +38,7 @@ cd claude-statusline
 - **yellow** — model display name
 - **green** — context tokens used / max
 - **white** — session elapsed time (from `cost.total_duration_ms`)
-- **purple** — 5-hour rate limit bar + reset
+- **red** — 5-hour rate limit bar + reset
 - **orange** — weekly rate limit bar + reset
 
 ### Auto-wrapping

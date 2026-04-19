@@ -158,7 +158,7 @@ if ($data.rate_limits -and $data.rate_limits.five_hour -and $data.rate_limits.fi
     $seg = "5h " + (Format-Bar $pct 8) + (" {0,3:N0}%" -f $pct)
     $reset = Format-ResetTime $data.rate_limits.five_hour.resets_at
     if ($reset) { $seg += " (" + $reset + ")" }
-    $parts += (C "34" $seg)
+    $parts += (C "38;5;141" $seg)
 }
 
 # weekly rate limit (orange)

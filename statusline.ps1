@@ -110,7 +110,7 @@ if ($data.model -and $data.model.display_name) {
 # session timer (bright white)
 if ($data.cost -and $data.cost.total_duration_ms -ne $null) {
     $dur = Format-Duration ([long]$data.cost.total_duration_ms)
-    $parts += (C "97" $dur)
+    $parts += (C "97" ("Session: " + $dur))
 }
 
 # context tokens used / max (green)

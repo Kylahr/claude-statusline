@@ -6,6 +6,26 @@ $data = $input_json | ConvertFrom-Json
 $ESC = [char]27
 function C { param([string]$code, [string]$text) "$ESC[${code}m$text$ESC[0m" }
 
+function Strip-Ansi([string]$s) {
+    return $s -replace "$ESC\[[0-9;]*m", ''
+}
+
+function Get-WindowWidth {
+    if ($env:CLAUDE_STATUSLINE_WIDTH) {
+        $w = 0
+        if ([int]::TryParse($env:CLAUDE_STATUSLINE_WIDTH, [ref]$w) -and $w -gt 0) { return $w }
+    }
+    try {
+        $w = [Console]::WindowWidth
+        if ($w -gt 0) { return $w }
+    } catch { }
+    try {
+        $w = $Host.UI.RawUI.WindowSize.Width
+        if ($w -gt 0) { return $w }
+    } catch { }
+    return 120
+}
+
 function Format-Bar {
     param([double]$pct, [int]$width = 8)
     if ($pct -lt 0) { $pct = 0 }
@@ -43,6 +63,22 @@ function Format-Tokens {
     return "$n"
 }
 
+function Format-Duration {
+    param([long]$ms)
+    if ($ms -le 0) { return "0s" }
+    $sec = [long][Math]::Floor($ms / 1000)
+    if ($sec -lt 60) { return "${sec}s" }
+    $m = [long][Math]::Floor($sec / 60)
+    $s = $sec % 60
+    if ($m -lt 60) { return "${m}m${s}s" }
+    $h = [long][Math]::Floor($m / 60)
+    $m = $m % 60
+    if ($h -lt 24) { return "${h}h${m}m" }
+    $d = [long][Math]::Floor($h / 24)
+    $h = $h % 24
+    return "${d}d${h}h"
+}
+
 $parts = @()
 
 # cwd (cyan)
@@ -71,27 +107,48 @@ if ($data.model -and $data.model.display_name) {
     $parts += (C "33" $model_name)
 }
 
+# session timer (bright white)
+if ($data.cost -and $data.cost.total_duration_ms -ne $null) {
+    $dur = Format-Duration ([long]$data.cost.total_duration_ms)
+    $parts += (C "97" $dur)
+}
+
 # context tokens used / max (green)
+$used_input = $null
 if ($data.context_window) {
     $max = 200000
-    if ($model_name -and $model_name -match "1M") { $max = 1000000 }
+    if ($data.context_window.context_window_size) {
+        $max = [long]$data.context_window.context_window_size
+    } elseif ($model_name -and $model_name -match "1M") {
+        $max = 1000000
+    }
 
-    $used = $null
     if ($data.context_window.current_usage) {
         $cu = $data.context_window.current_usage
         $sum = 0
         if ($cu.input_tokens) { $sum += [long]$cu.input_tokens }
         if ($cu.cache_creation_input_tokens) { $sum += [long]$cu.cache_creation_input_tokens }
         if ($cu.cache_read_input_tokens) { $sum += [long]$cu.cache_read_input_tokens }
-        if ($sum -gt 0) { $used = $sum }
+        if ($sum -gt 0) { $used_input = $sum }
     }
-    if ($used -eq $null -and $data.context_window.used_percentage -ne $null) {
-        $used = [long]([double]$data.context_window.used_percentage / 100.0 * $max)
+    if ($used_input -eq $null -and $data.context_window.used_percentage -ne $null) {
+        $used_input = [long]([double]$data.context_window.used_percentage / 100.0 * $max)
     }
 
-    if ($used -ne $null) {
-        $label = "ctx " + (Format-Tokens $used) + "/" + (Format-Tokens $max)
+    if ($used_input -ne $null) {
+        $label = "ctx " + (Format-Tokens $used_input) + "/" + (Format-Tokens $max)
         $parts += (C "32" $label)
+    }
+}
+
+# in/out tokens (bright green) — last API call
+if ($data.context_window -and $data.context_window.current_usage) {
+    $cu = $data.context_window.current_usage
+    $in = if ($cu.input_tokens) { [long]$cu.input_tokens } else { 0 }
+    $out = if ($cu.output_tokens) { [long]$cu.output_tokens } else { 0 }
+    if ($in -gt 0 -or $out -gt 0) {
+        $label = "in " + (Format-Tokens $in) + " out " + (Format-Tokens $out)
+        $parts += (C "92" $label)
     }
 }
 
@@ -113,5 +170,32 @@ if ($data.rate_limits -and $data.rate_limits.seven_day -and $data.rate_limits.se
     $parts += (C "38;5;208" $seg)
 }
 
+# Pack segments into rows that fit in the terminal width
+$width = Get-WindowWidth
+$sepPlain = " | "
+$sepLen = $sepPlain.Length
+
+$rows = [System.Collections.ArrayList]@()
+$currentRow = [System.Collections.ArrayList]@()
+$currentLen = 0
+
+foreach ($p in $parts) {
+    $pLen = (Strip-Ansi $p).Length
+    $addLen = if ($currentRow.Count -eq 0) { $pLen } else { $pLen + $sepLen }
+    if ($currentRow.Count -gt 0 -and ($currentLen + $addLen) -gt $width) {
+        [void]$rows.Add($currentRow)
+        $currentRow = [System.Collections.ArrayList]@()
+        $currentLen = 0
+        $addLen = $pLen
+    }
+    [void]$currentRow.Add($p)
+    $currentLen += $addLen
+}
+if ($currentRow.Count -gt 0) { [void]$rows.Add($currentRow) }
+
 $sep = C "90" "|"
-[Console]::Out.Write(($parts -join " $sep "))
+$lines = @()
+foreach ($row in $rows) {
+    $lines += ($row -join " $sep ")
+}
+[Console]::Out.Write($lines -join "`n")

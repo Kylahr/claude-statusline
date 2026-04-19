@@ -18,8 +18,9 @@ Invoke-WebRequest -Uri $StatuslineUrl -OutFile $targetPs1 -UseBasicParsing
 
 $forwardSlashPath = $targetPs1 -replace '\\', '/'
 $statusLineCfg = [pscustomobject]@{
-    type    = 'command'
-    command = "powershell -NoProfile -ExecutionPolicy Bypass -File `"$forwardSlashPath`""
+    type            = 'command'
+    command         = "powershell -NoProfile -ExecutionPolicy Bypass -File `"$forwardSlashPath`""
+    refreshInterval = 10
 }
 
 if (Test-Path $settingsPath) {

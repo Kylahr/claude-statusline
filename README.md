@@ -2,7 +2,7 @@
 
 A PowerShell statusline for [Claude Code](https://claude.com/claude-code) on Windows.
 
-Shows: working directory, git branch, model name, context token usage, 5-hour rate limit, and weekly rate limit (with reset timers).
+Shows: working directory, git branch, model name, session timer, context token usage, last-call input/output tokens, and 5-hour + weekly rate limits (with reset timers). Segments auto-wrap into rows when the terminal is narrow.
 
 ## Install (one command)
 
@@ -15,7 +15,7 @@ irm https://raw.githubusercontent.com/Kylahr/claude-statusline/main/install.ps1 
 This will:
 
 1. Download `statusline.ps1` to `~/.claude/statusline-command.ps1`
-2. Patch `~/.claude/settings.json` to register it as your `statusLine`
+2. Patch `~/.claude/settings.json` to register it as your `statusLine` with `refreshInterval: 10` so the session timer keeps ticking during idle
 
 Restart Claude Code afterwards.
 
@@ -30,15 +30,27 @@ cd claude-statusline
 ## What it shows
 
 ```
-~/Desktop/Projekte | main | Opus 4.7 1M | ctx 42k/1.0M | 5h [████░░░░]  52% (2h14m) | wk [██░░░░░░]  23% (4d11h)
+~/Desktop/Projekte | main | Opus 4.7 1M | 12m34s | ctx 42k/1.0M | in 38k out 3k | 5h [████░░░░]  52% (2h14m) | wk [██░░░░░░]  23% (4d11h)
 ```
 
 - **cyan** — current directory (with `~` for home)
 - **magenta** — git branch (if inside a repo)
 - **yellow** — model display name
-- **green** — context tokens used / max (auto-detects 1M context)
+- **white** — session elapsed time (from `cost.total_duration_ms`)
+- **green** — context tokens used / max
+- **bright green** — input + output tokens from the last API call
 - **blue** — 5-hour rate limit bar + reset
 - **orange** — weekly rate limit bar + reset
+
+### Auto-wrapping
+
+If your terminal is too narrow to fit everything, segments pack into multiple rows greedily. The window width is detected via `[Console]::WindowWidth`; if detection fails, it falls back to 120 columns.
+
+Override the width manually by setting the `CLAUDE_STATUSLINE_WIDTH` env var before launching Claude Code:
+
+```powershell
+$env:CLAUDE_STATUSLINE_WIDTH = "80"; claude
+```
 
 ## Uninstall
 
